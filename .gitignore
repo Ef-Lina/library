@@ -2,3 +2,4 @@ htmlcov
 .coverage
 .idea
 .pytest_cache
+library.db
