@@ -1,13 +1,14 @@
+"""Модуль для аутентификации и управления токенами."""
 from datetime import datetime, timedelta, timezone
-from passlib.context import CryptContext
 from typing import Union
 import jwt
 from jwt.exceptions import InvalidTokenError
-from src.schemas.config import settings
-from typing_extensions import Annotated
+from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlmodel import Session, select
+from typing_extensions import Annotated
+from sqlmodel import select  # Уберите неиспользуемый импорт Session
+from src.schemas.config import settings
 from src.api.dependencies import SessionDep
 from src.models import users as schema_users
 
@@ -16,15 +17,19 @@ from src.models import users as schema_users
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
+
 def get_password_hash(password):
+    """Хеширует пароль с использованием bcrypt."""
     return pwd_context.hash(password)
 
 
 def verify_password(plain_password, hashed_password):
+    """Проверяет соответствие введённого пароля и хешированного пароля."""
     return pwd_context.verify(plain_password, hashed_password)
 
 def create_access_token(data: dict,
                         expires_delta: Union[timedelta, None] = None):
+    """Создает JWT токен с заданными данными и временем истечения."""
     to_encode = data.copy()
     if expires_delta:
         expire = (datetime.now(timezone.utc) +
@@ -43,6 +48,7 @@ def create_access_token(data: dict,
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)],
                      db_session: SessionDep):
+    """Получает текущего пользователя на основе предоставленного токена."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -53,13 +59,13 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)],
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-    except InvalidTokenError:
-        raise credentials_exception
+    except InvalidTokenError as e:
+        raise credentials_exception from e
 
     statement = (select(schema_users.UserModel)
                  .where(schema_users.UserModel.email == username))
-    user = await db_session.execute(statement)  # Используйте await для асинхронного выполнения
-    user = user.scalars().first()  # Получаем первого пользователя из результата
+    user = await db_session.execute(statement)
+    user = user.scalars().first()
 
     if user is None:
         raise credentials_exception

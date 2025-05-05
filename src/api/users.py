@@ -1,16 +1,14 @@
+"""Модуль для аутентификации пользователей в приложении."""
+from datetime import timedelta
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from src.api.dependencies import SessionDep
 from src.schemas.users import UserSchema
-from src.schemas import users
-    #, UserGetSchema
 from src.models.users import UserModel
-from sqlalchemy import select
-from typing import List
-from sqlalchemy.exc import IntegrityError
-from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from src.auth import auth_handler
 from src.schemas.config import settings
-from datetime import datetime, timedelta, timezone
 
 
 
@@ -21,10 +19,11 @@ router = APIRouter(prefix="/auth",
                    )
 
 
-@router.post("/signup", summary="Регистрация", status_code=status.HTTP_201_CREATED)
+@router.post("/signup", summary="Регистрация",
+             status_code=status.HTTP_201_CREATED)
 async def add_user(data:UserSchema, session: SessionDep):
     """
-    Эндпоинт для добавления нового пользователя
+    Эндпоинт для добавления нового пользователя.
     """
 
     new_user = UserModel(
@@ -35,19 +34,25 @@ async def add_user(data:UserSchema, session: SessionDep):
     session.add(new_user)
     try:
         await session.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         await session.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Пользователь с таким email уже существует.")
+                            detail="Пользователь с таким "
+                                   "email уже существует.") from exc
     except Exception as e:
         await session.rollback()
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail=str(e)) from e
     return {"success": True, "message": "Регистрация прошла успешно"}
 
 
 @router.post("/login", status_code=status.HTTP_200_OK,
              summary="Войти в систему")
-async def user_login(session: SessionDep, login_attempt_data: OAuth2PasswordRequestForm = Depends()):
+async def user_login(session: SessionDep,
+                     login_attempt_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    Эндпоинт для входа пользователя в систему.
+    """
     statement = (select(UserModel)
                  .where(UserModel.email == login_attempt_data.username))
     result = await session.execute(statement)
