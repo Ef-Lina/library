@@ -9,6 +9,8 @@ from typing import List
 from sqlalchemy.exc import IntegrityError
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from src.auth import auth_handler
+from src.schemas.config import settings
+from datetime import datetime, timedelta, timezone
 
 
 
@@ -58,8 +60,10 @@ async def user_login(session: SessionDep, login_attempt_data: OAuth2PasswordRequ
         )
     if auth_handler.verify_password(login_attempt_data.password,
                                     existing_user.password):
+        access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
         access_token = auth_handler.create_access_token(
-            existing_user.user_id
+            data={"sub": login_attempt_data.username},
+            expires_delta=access_token_expires
         )
         return {
             "access_token": access_token,
@@ -70,19 +74,3 @@ async def user_login(session: SessionDep, login_attempt_data: OAuth2PasswordRequ
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Wrong password for user {login_attempt_data.username}"
         )
-
-
-
-
-        # async def user_login(login_attempt_data: OAuth2PasswordRequestForm = Depends(), session: SessionDep):
-        #     statement = (select(users.UserSchema)
-        #                  .where(users.UserSchema.email == login_attempt_data.username))
-        #     existing_user = session.exec(statement).first()
-        #
-        #     if not existing_user:
-        #         raise HTTPException(
-        #             status_code=status.HTTP_401_UNAUTHORIZED,
-        #             detail=f"UserSchema {login_attempt_data.username} not found"
-        #         )
-        #     if verify_password(login_attempt_data.password, existing_user.password):
-
