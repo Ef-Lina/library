@@ -4,6 +4,9 @@ from src.schemas.books import BookSchema, BookGetSchema
 from src.models.books import BookModel
 from sqlalchemy import select
 from typing import List
+from sqlalchemy.exc import IntegrityError
+
+
 
 router = APIRouter(prefix="/books_1",
     tags=["Книги 📚"],
@@ -22,8 +25,17 @@ async def add_book(data:BookSchema, session: SessionDep):
         author = data.author,
         year = data.year
     )
+
     session.add(new_book)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Книга с таким названием уже существует.")
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     return {"success": True, "message": "Книга успешно добавлена"}
 
 
@@ -36,7 +48,7 @@ async def get_books(session: SessionDep) -> List[BookGetSchema]:
     result = await session.execute(query)
     books = result.scalars().all()
     if books is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Библтотека пуста")
+        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="Библиотека пуста")
     return books
 
 
@@ -69,8 +81,11 @@ async def update_book_by_id(book_id: int, data:BookSchema, session: SessionDep):
     book.title = data.title
     book.author = data.author
     book.year = data.year
-
-    await session.commit()
+    try:
+        await session.commit()
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     return {"success": True, "message": "Данные книги успешно обновлены"}
 
 

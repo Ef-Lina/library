@@ -4,7 +4,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 
 
-engine = create_async_engine('sqlite+aiosqlite:///books.db')
+engine = create_async_engine('sqlite+aiosqlite:///library.db')
 
 new_session = async_sessionmaker(engine, expire_on_commit=False)
 

@@ -8,6 +8,6 @@ class BookModel(Base):
     __tablename__ = "books"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    title: Mapped[str]
+    title: Mapped[str] = mapped_column(unique=True)
     author: Mapped[str]
     year: Mapped[int]

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 class BookSchema(BaseModel):
     title: str = Field(description="Название")
     author: str = Field(description="Автор")
-    year: int = Field(description="Год издания")
+    year: int = Field(description="Год издания", ge=0, le=2025)
     class Config:
         json_schema_extra = {
             "example": {
