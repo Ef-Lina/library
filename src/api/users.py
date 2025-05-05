@@ -10,12 +10,8 @@ from sqlalchemy.exc import IntegrityError
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from src.auth import auth_handler
 
-# from passlib.context import CryptContext
-#
-# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-#
-# def verify_password(plain_password, hashed_password):
-#     return pwd_context.verify(plain_password, hashed_password)
+
+
 
 
 router = APIRouter(prefix="/auth",
@@ -32,7 +28,7 @@ async def add_user(data:UserSchema, session: SessionDep):
     new_user = UserModel(
         name = data.name,
         email = data.email,
-        password = data.password
+        password = auth_handler.get_password_hash(data.password)
     )
     session.add(new_user)
     try:
@@ -60,7 +56,8 @@ async def user_login(session: SessionDep, login_attempt_data: OAuth2PasswordRequ
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"UserSchema {login_attempt_data.username} not found"
         )
-    if existing_user.password == login_attempt_data.password:
+    if auth_handler.verify_password(login_attempt_data.password,
+                                    existing_user.password):
         access_token = auth_handler.create_access_token(
             existing_user.user_id
         )
