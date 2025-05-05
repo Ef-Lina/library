@@ -10,3 +10,4 @@ class BookModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str]
     author: Mapped[str]
+    year: Mapped[int]
